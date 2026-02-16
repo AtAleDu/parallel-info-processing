@@ -1,0 +1,6 @@
+clang-format -n main.c
+clang-format -i main.c
+
+cppcheck --enable=all --suppress=missingIncludeSystem main.c
+
+valgrind --leak-check=full ./program
