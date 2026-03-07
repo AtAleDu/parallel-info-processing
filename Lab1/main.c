@@ -5,14 +5,21 @@
 
 #define BUFFER_SIZE 10
 
-int buffer[BUFFER_SIZE];
-int count = 0;
-int in = 0;
-int out = 0;
+typedef struct {
+    int data[BUFFER_SIZE];
+    int head;
+    int tail;
+    int size;
+} Queue;
+
+Queue queue;
 
 pthread_mutex_t mutex;
 pthread_cond_t not_full;
 pthread_cond_t not_empty;
+
+static void enqueue(int value);
+static int dequeue(void);
 
 static void* writer(void* arg);
 static void* reader(void* arg);
@@ -23,9 +30,11 @@ int main(void) {
     pthread_t reader_thread;
 
     int status;
-    int result;
+    int result = 0;
 
-    result = 0;
+    queue.head = 0;
+    queue.tail = 0;
+    queue.size = 0;
 
     status = pthread_mutex_init(&mutex, NULL);
     if (status != 0)
@@ -70,27 +79,31 @@ int main(void) {
     return result;
 }
 
-static void* writer(void* arg) {
-    void* result;
+static void enqueue(int value) {
+    queue.data[queue.tail] = value;
+    queue.tail = (queue.tail + 1) % BUFFER_SIZE;
+    queue.size++;
+}
 
+static int dequeue(void) {
+    int value = queue.data[queue.head];
+    queue.head = (queue.head + 1) % BUFFER_SIZE;
+    queue.size--;
+    return value;
+}
+
+static void* writer(void* arg) {
     (void)arg;
-    result = NULL;
 
     while (1) {
-        int value;
-
-        value = rand() % 100;
+        int value = rand() % 100;
 
         pthread_mutex_lock(&mutex);
 
-        while (count == BUFFER_SIZE)
+        while (queue.size == BUFFER_SIZE)
             pthread_cond_wait(&not_full, &mutex);
 
-        buffer[in] = value;
-
-        in = (in + 1) % BUFFER_SIZE;
-
-        count = count + 1;
+        enqueue(value);
 
         printf("Writer wrote: %d\n", value);
 
@@ -101,28 +114,21 @@ static void* writer(void* arg) {
         usleep(500000);
     }
 
-    return result;
+    return NULL;
 }
 
 static void* reader(void* arg) {
-    void* result;
-
     (void)arg;
-    result = NULL;
 
     while (1) {
         int value;
 
         pthread_mutex_lock(&mutex);
 
-        while (count == 0)
+        while (queue.size == 0)
             pthread_cond_wait(&not_empty, &mutex);
 
-        value = buffer[out];
-
-        out = (out + 1) % BUFFER_SIZE;
-
-        count = count - 1;
+        value = dequeue();
 
         printf("Reader read: %d\n", value);
 
@@ -133,5 +139,5 @@ static void* reader(void* arg) {
         usleep(700000);
     }
 
-    return result;
-} 
+    return NULL;
+}
