@@ -1,14 +1,18 @@
 #include <stdio.h>
 #include <omp.h>
-
+//в чем отличие
 int main(void) {
-#pragma omp parallel num_threads(4)
-    {
-#pragma omp critical
-        {
-            printf("Hello World!\n");
-        }
+    omp_set_num_threads(20);
+    #pragma omp parallel
+    {   
+        printf("Hello World!\n");
     }
-
-    return 0;
+    #pragma omp parallel num_threads(10)
+    {
+        printf("Hello World dsfgdsf!\n");
+    }
+    #pragma omp parallel
+    {   
+        printf("Hello Wвввввorld!\n");
+    }
 }
